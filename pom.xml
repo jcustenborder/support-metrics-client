@@ -8,7 +8,7 @@
   <parent>
     <groupId>io.confluent.support</groupId>
     <artifactId>support-metrics-common-parent</artifactId>
-    <version>5.1.0-SNAPSHOT</version>
+    <version>5.1.0</version>
   </parent>
 
   <artifactId>support-metrics-client-parent</artifactId>
@@ -35,7 +35,7 @@
     <mock-server.version>3.10.4</mock-server.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven-assembly.version>2.6</maven-assembly.version>
-    <confluent.support.metrics.version>5.1.0-SNAPSHOT</confluent.support.metrics.version>
+    <confluent.support.metrics.version>5.1.0</confluent.support.metrics.version>
     <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
   </properties>
 
