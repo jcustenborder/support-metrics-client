@@ -140,16 +140,6 @@
           </execution>
         </executions>
       </plugin>
-      <!-- fork JVM for tests because some tests change JVM system parameters -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <argLine>-Djava.awt.headless=true</argLine>
-          <forkCount>2C</forkCount>
-          <reuseForks>false</reuseForks>
-        </configuration>
-      </plugin>
     </plugins>
   </build>
 
