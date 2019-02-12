@@ -7,7 +7,7 @@
 
   <groupId>io.confluent.support</groupId>
   <artifactId>support-metrics-client-parent</artifactId>
-  <version>3.3.3-SNAPSHOT</version>
+  <version>3.3.3</version>
   <packaging>pom</packaging>
   <name>support-metrics-client-parent</name>
 
@@ -29,7 +29,7 @@
   <properties>
     <java.version>1.7</java.version>
     <avro.version>1.8.2</avro.version>
-    <kafka.version>0.11.0.4-SNAPSHOT</kafka.version>
+    <kafka.version>0.11.0.3-cp3</kafka.version>
     <!-- For the moment we must use the "first" Kafka Scala version that we built
          during packaging (cf. `kafka-packaging`), otherwise the build of this
          project will fail during packaging due to missing Kafka libraries. -->
@@ -39,7 +39,7 @@
     <mockito.version>2.0.31-beta</mockito.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven-assembly.version>2.6</maven-assembly.version>
-    <confluent.support.metrics.version>3.3.3-SNAPSHOT</confluent.support.metrics.version>
+    <confluent.support.metrics.version>3.3.3</confluent.support.metrics.version>
     <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
   </properties>
 
