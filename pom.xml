@@ -7,7 +7,7 @@
 
   <groupId>io.confluent.support</groupId>
   <artifactId>support-metrics-client-parent</artifactId>
-  <version>4.0.3-SNAPSHOT</version>
+  <version>4.0.3</version>
   <packaging>pom</packaging>
   <name>support-metrics-client-parent</name>
 
@@ -29,7 +29,7 @@
   <properties>
     <java.version>1.7</java.version>
     <avro.version>1.8.2</avro.version>
-    <kafka.version>1.0.3-SNAPSHOT</kafka.version>
+    <kafka.version>1.0.2-cp2</kafka.version>
     <!-- For the moment we must use the "first" Kafka Scala version that we built
          during packaging (cf. `kafka-packaging`), otherwise the build of this
          project will fail during packaging due to missing Kafka libraries. -->
@@ -41,7 +41,7 @@
     <maven-assembly.version>2.6</maven-assembly.version>
     <maven-site-plugin.version>3.7.1</maven-site-plugin.version>
     <maven-project-info-reports-plugin.version>2.9</maven-project-info-reports-plugin.version>
-    <confluent.support.metrics.version>4.0.3-SNAPSHOT</confluent.support.metrics.version>
+    <confluent.support.metrics.version>4.0.3</confluent.support.metrics.version>
     <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
   </properties>
 
