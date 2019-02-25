@@ -7,7 +7,7 @@
 
   <groupId>io.confluent.support</groupId>
   <artifactId>support-metrics-client-parent</artifactId>
-  <version>4.0.3-SNAPSHOT</version>
+  <version>4.0.4-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>support-metrics-client-parent</name>
 
@@ -41,7 +41,7 @@
     <maven-assembly.version>2.6</maven-assembly.version>
     <maven-site-plugin.version>3.7.1</maven-site-plugin.version>
     <maven-project-info-reports-plugin.version>2.9</maven-project-info-reports-plugin.version>
-    <confluent.support.metrics.version>4.0.3-SNAPSHOT</confluent.support.metrics.version>
+    <confluent.support.metrics.version>4.0.4-SNAPSHOT</confluent.support.metrics.version>
     <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
   </properties>
 
