@@ -12,7 +12,7 @@
   </parent>
 
   <artifactId>support-metrics-client-parent</artifactId>
-  <version>4.1.3-SNAPSHOT</version>
+  <version>4.1.3</version>
   <packaging>pom</packaging>
   <name>support-metrics-client-parent</name>
 
