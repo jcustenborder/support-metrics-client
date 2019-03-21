@@ -14,19 +14,22 @@
 
 package io.confluent.support.metrics;
 
-import org.apache.kafka.common.utils.Time;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Properties;
-
 import kafka.metrics.KafkaMetricsReporter;
 import kafka.metrics.KafkaMetricsReporter$;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.VerifiableProperties;
+import org.apache.kafka.common.utils.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.Option;
 import scala.collection.Seq;
+
+import java.security.Provider;
+import java.security.Security;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * Starts a Kafka broker plus an associated "support metrics" collection thread for this broker.
@@ -45,11 +48,86 @@ public class SupportedServerStartable {
   private final KafkaServer server;
   private MetricsReporter metricsReporter = null;
 
+
+  void checkFips1402(KafkaConfig serverConfig) {
+    log.info("Starting with FIPS 140-2 Mode.");
+
+    final String ERROR_PREFIX = "FIPS 140-2 Configuration Error - ";
+
+    int violations = 0;
+
+    final List<String> allowedCiphers = Arrays.asList(
+        "TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA",
+        "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
+        "TLS_DHE_DSS_WITH_AES_256_CBC_SHA",
+        "TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA"
+    );
+
+    log.trace("checkFips1402() - Checking SSL");
+    for (final String cipher : serverConfig.sslCipher()) {
+      log.trace("checkFips1402() - Checking cipher '{}'", cipher);
+      if(!allowedCiphers.contains(cipher)) {
+        violations++;
+        log.error(ERROR_PREFIX + "SSL Cipher \"{}\" is not allowed.  Check ssl.cipher.suites.", cipher);
+      }
+    }
+
+    final List<String> allowedProtocols = Arrays.asList(
+        "TLSv1.2",
+        "TLSv1.1"
+    );
+
+    log.trace("checkFips1402() - Checking Protocols");
+    for (final String protocol : serverConfig.sslEnabledProtocols()) {
+      log.trace("checkFips1402() - Checking protocol '{}'", protocol);
+      if(!allowedProtocols.contains(protocol)) {
+        violations++;
+        log.error(ERROR_PREFIX + "Protocol \"{}\" is not allowed. Check ssl.enabled.protocols.", protocol);
+      }
+    }
+
+    final List<String> allowedBrokerProtocols = Arrays.asList("SASL_SSL", "SSL");
+
+    if(allowedBrokerProtocols.contains(serverConfig.interBrokerSecurityProtocol().name)) {
+      violations++;
+      log.error(ERROR_PREFIX + "Inter Broker Security Protocol '{}' is not allowed. Only SASL_SSL and SSL are allowed. " +
+          "Check security.inter.broker.protocol.", serverConfig.interBrokerSecurityProtocol().name);
+    }
+
+    if (violations > 0) {
+      throw new IllegalStateException("FIPS configuration violations preventing server startup. Please check previous log entries.");
+    }
+  }
+
+
   public SupportedServerStartable(Properties brokerConfiguration) {
     Seq<KafkaMetricsReporter>
         reporters =
         KafkaMetricsReporter$.MODULE$.startReporters(new VerifiableProperties(brokerConfiguration));
     KafkaConfig serverConfig = KafkaConfig.fromProps(brokerConfiguration);
+
+    if (brokerConfiguration.getProperty("fips.140.2.enable") == "true") {
+      checkFips1402(serverConfig);
+    }
+
+
     Option<String> noThreadNamePrefix = Option.empty();
     server = new KafkaServer(serverConfig, Time.SYSTEM, noThreadNamePrefix, reporters);
 
