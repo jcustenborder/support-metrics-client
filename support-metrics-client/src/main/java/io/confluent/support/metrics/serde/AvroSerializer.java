@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.confluent.support.metrics.serde;
 
 import org.apache.avro.file.DataFileWriter;
@@ -28,10 +29,10 @@ public class AvroSerializer {
   /**
    * Serializes the record as an in-memory representation of a standard Avro file.
    *
-   * That is, the returned bytes include a standard Avro header that contains a magic byte, the
+   * <p>That is, the returned bytes include a standard Avro header that contains a magic byte, the
    * record's Avro schema (and so on), followed by the byte representation of the record.
    *
-   * Implementation detail:  This method uses Avro's {@code DataFileWriter}.
+   * <p>Implementation detail:  This method uses Avro's {@code DataFileWriter}.
    *
    * @return Avro-encoded record (bytes) that includes the Avro schema
    */

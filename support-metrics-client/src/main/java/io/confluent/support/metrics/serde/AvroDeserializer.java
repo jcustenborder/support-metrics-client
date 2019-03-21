@@ -11,6 +11,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
+
 package io.confluent.support.metrics.serde;
 
 import org.apache.avro.Schema;
@@ -30,10 +31,10 @@ public class AvroDeserializer {
   /**
    * Deserializes the bytes as an array of Generic containers.
    *
-   * The bytes include a standard Avro header that contains a magic byte, the
+   * <p>The bytes include a standard Avro header that contains a magic byte, the
    * record's Avro schema (and so on), followed by the byte representation of the record.
    *
-   * Implementation detail:  This method uses Avro's {@code DataFileWriter}.
+   * <p>Implementation detail:  This method uses Avro's {@code DataFileWriter}.
    * @schema Schema associated with this container
    * @return A Generic Container class
    */
@@ -43,7 +44,8 @@ public class AvroDeserializer {
     if (container != null) {
       DatumReader<GenericContainer> datumReader = new GenericDatumReader<>(schema);
       ByteArrayInputStream in = new ByteArrayInputStream(container);
-      DataFileStream<GenericContainer> reader = new DataFileStream<GenericContainer>(in, datumReader);
+      DataFileStream<GenericContainer> reader =
+          new DataFileStream<GenericContainer>(in, datumReader);
       while (reader.hasNext()) {
         ret = reader.next(ret);
         retList.add(ret);
@@ -58,10 +60,10 @@ public class AvroDeserializer {
    * Deserializes the bytes as an array of Generic containers. Assumes schema is
    * embedded with bytes.
    *
-   * The bytes include a standard Avro header that contains a magic byte, the
+   * <p>The bytes include a standard Avro header that contains a magic byte, the
    * record's Avro schema (and so on), followed by the byte representation of the record.
    *
-   * Implementation detail:  This method uses Avro's {@code DataFileWriter}.
+   * <p>Implementation detail:  This method uses Avro's {@code DataFileWriter}.
    * @return A Generic Container class
    */
   public GenericContainer[] deserialize(byte[] container) throws IOException {
@@ -70,7 +72,8 @@ public class AvroDeserializer {
     if (container != null) {
       DatumReader<GenericContainer> datumReader = new GenericDatumReader<>();
       ByteArrayInputStream in = new ByteArrayInputStream(container);
-      DataFileStream<GenericContainer> reader = new DataFileStream<GenericContainer>(in, datumReader);
+      DataFileStream<GenericContainer> reader =
+          new DataFileStream<GenericContainer>(in, datumReader);
       while (reader.hasNext()) {
         ret = reader.next(ret);
         retList.add(ret);
@@ -83,11 +86,6 @@ public class AvroDeserializer {
 
   /**
    * Deserializes the bytes of AVRO records as specific containers of a particular class
-   * @param clazz
-   * @param container
-   * @param <T>
-   * @return
-   * @throws IOException
    */
   public <T> T[] deserialize(Class<T> clazz, byte[] container) throws IOException {
     T ret = null;

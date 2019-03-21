@@ -11,53 +11,56 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
+
 package io.confluent.support.metrics.collectors;
 
-import kafka.server.KafkaServer;
 import org.apache.avro.generic.GenericContainer;
 import org.apache.kafka.common.utils.AppInfoParser;
 
 import io.confluent.support.metrics.SupportKafkaMetricsBasic;
 import io.confluent.support.metrics.common.Collector;
-import io.confluent.support.metrics.common.time.TimeUtils;
 import io.confluent.support.metrics.common.Uuid;
 import io.confluent.support.metrics.common.Version;
-
-import java.util.Properties;
+import io.confluent.support.metrics.common.time.TimeUtils;
+import kafka.server.KafkaServer;
 
 public class BasicCollector extends Collector {
 
-    private final TimeUtils time;
-    private final Uuid uuid;
-    private final KafkaServer server;
+  private final TimeUtils time;
+  private final Uuid uuid;
+  private final KafkaServer server;
 
-    public BasicCollector(KafkaServer server,
-                          TimeUtils time) {
-        this(server, time, new Uuid());
-    }
+  public BasicCollector(
+      KafkaServer server,
+      TimeUtils time
+  ) {
+    this(server, time, new Uuid());
+  }
 
-    public BasicCollector(KafkaServer server,
-                          TimeUtils time,
-                          Uuid uuid) {
-        super();
-        this.server = server;
-        this.time = time;
-        this.uuid = uuid;
-    }
+  public BasicCollector(
+      KafkaServer server,
+      TimeUtils time,
+      Uuid uuid
+  ) {
+    super();
+    this.server = server;
+    this.time = time;
+    this.uuid = uuid;
+  }
 
-    /**
-     * @return A new metrics record, or null in case of any errors.
-     */
-    @Override
-    public GenericContainer collectMetrics() {
-        SupportKafkaMetricsBasic metricsRecord = new SupportKafkaMetricsBasic();
-        metricsRecord.setTimestamp(time.nowInUnixTime());
-        metricsRecord.setKafkaVersion(AppInfoParser.getVersion());
-        metricsRecord.setConfluentPlatformVersion(Version.getVersion());
-        metricsRecord.setCollectorState(this.getRuntimeState().stateId());
-        metricsRecord.setBrokerProcessUUID(uuid.toString());
-        metricsRecord.setClusterId(server.clusterId());
-        return metricsRecord;
-    }
+  /**
+   * @return A new metrics record, or null in case of any errors.
+   */
+  @Override
+  public GenericContainer collectMetrics() {
+    SupportKafkaMetricsBasic metricsRecord = new SupportKafkaMetricsBasic();
+    metricsRecord.setTimestamp(time.nowInUnixTime());
+    metricsRecord.setKafkaVersion(AppInfoParser.getVersion());
+    metricsRecord.setConfluentPlatformVersion(Version.getVersion());
+    metricsRecord.setCollectorState(this.getRuntimeState().stateId());
+    metricsRecord.setBrokerProcessUUID(uuid.toString());
+    metricsRecord.setClusterId(server.clusterId());
+    return metricsRecord;
+  }
 
 }

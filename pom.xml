@@ -5,9 +5,13 @@
 
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.confluent.support</groupId>
+  <parent>
+    <groupId>io.confluent.support</groupId>
+    <artifactId>support-metrics-common-parent</artifactId>
+    <version>5.1.2</version>
+  </parent>
+
   <artifactId>support-metrics-client-parent</artifactId>
-  <version>4.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>support-metrics-client-parent</name>
 
@@ -27,19 +31,11 @@
   </prerequisites>
 
   <properties>
-    <java.version>1.7</java.version>
-    <avro.version>1.8.2</avro.version>
-    <kafka.version>1.0.0-SNAPSHOT</kafka.version>
-    <!-- For the moment we must use the "first" Kafka Scala version that we built
-         during packaging (cf. `kafka-packaging`), otherwise the build of this
-         project will fail during packaging due to missing Kafka libraries. -->
-    <kafka.scala.version>2.11</kafka.scala.version>
-    <junit.version>4.12</junit.version>
     <assertj.version>2.2.0</assertj.version>
-    <mockito.version>2.0.31-beta</mockito.version>
+    <mock-server.version>3.10.4</mock-server.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven-assembly.version>2.6</maven-assembly.version>
-    <confluent.support.metrics.version>4.0.0-SNAPSHOT</confluent.support.metrics.version>
+    <confluent.support.metrics.version>5.1.2</confluent.support.metrics.version>
     <confluent.maven.repo>http://packages.confluent.io/maven/</confluent.maven.repo>
   </properties>
 
@@ -70,16 +66,6 @@
     </pluginManagement>
     <plugins>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.3</version>
-        <inherited>true</inherited>
-        <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>
         <version>1.4.0</version>
@@ -90,14 +76,6 @@
             </goals>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.19.1</version>
-        <configuration>
-          <argLine>-Djava.awt.headless=true</argLine>
-        </configuration>
       </plugin>
     </plugins>
   </build>

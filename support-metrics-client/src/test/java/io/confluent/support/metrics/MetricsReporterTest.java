@@ -13,6 +13,7 @@
  */
 package io.confluent.support.metrics;
 
+import kafka.zk.KafkaZkClient;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -20,7 +21,6 @@ import java.util.Properties;
 
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import kafka.utils.ZkUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -33,27 +33,27 @@ public class MetricsReporterTest {
 
   @BeforeClass
   public static void startCluster() {
-    ZkUtils mockZkUtils = mock(ZkUtils.class);
+    KafkaZkClient mockZkClient = mock(KafkaZkClient.class);
     KafkaConfig mockConfig = mock(KafkaConfig.class);
     when(mockConfig.advertisedHostName()).thenReturn("anyHostname");
     when(mockConfig.advertisedPort()).thenReturn(12345);
     mockServer = mock(KafkaServer.class);
-    when(mockServer.zkUtils()).thenReturn(mockZkUtils);
+    when(mockServer.zkClient()).thenReturn(mockZkClient);
     when(mockServer.config()).thenReturn(mockConfig);
   }
 
   @Test
-  public void testInvalidArgumentsForConstructorNullServer() throws Exception {
+  public void testInvalidArgumentsForConstructorNullServer() {
     // Given
     Properties emptyProperties = new Properties();
     Runtime serverRuntime = Runtime.getRuntime();
-
+    KafkaSupportConfig kafkaSupportConfig = new KafkaSupportConfig(emptyProperties);
     // When/Then
     try {
-      new MetricsReporter(null, emptyProperties, serverRuntime);
-      fail("IllegalArgumentException expected because server is null");
-    } catch (IllegalArgumentException e) {
-      assertThat(e).hasMessage("some arguments are null");
+      new MetricsReporter("testThread", false, null, kafkaSupportConfig, serverRuntime);
+      fail("NullPointerException expected because server is null");
+    } catch (NullPointerException e) {
+      assertThat(e).hasMessage("Kafka Server can't be null");
     }
   }
 
@@ -64,10 +64,10 @@ public class MetricsReporterTest {
 
     // When/Then
     try {
-      new MetricsReporter(mockServer, null, serverRuntime);
-      fail("IllegalArgumentException expected because props is null");
-    } catch (IllegalArgumentException e) {
-      assertThat(e).hasMessage("some arguments are null");
+      new MetricsReporter("testThread", false, mockServer, null, serverRuntime);
+      fail("NullPointerException expected because props is null");
+    } catch (NullPointerException e) {
+      assertThat(e).hasMessage("supportConfig can't be null");
     }
   }
 
@@ -75,13 +75,14 @@ public class MetricsReporterTest {
   public void testInvalidArgumentsForConstructorNullRuntime() {
     // Given
     Properties emptyProperties = new Properties();
+    KafkaSupportConfig kafkaSupportConfig = new KafkaSupportConfig(emptyProperties);
 
     // When/Then
     try {
-      new MetricsReporter(mockServer, emptyProperties, null);
-      fail("IllegalArgumentException expected because serverRuntime is null");
-    } catch (IllegalArgumentException e) {
-      assertThat(e).hasMessage("some arguments are null");
+      new MetricsReporter("testThread", false, mockServer, kafkaSupportConfig, null);
+      fail("NullPointerException expected because serverRuntime is null");
+    } catch (NullPointerException e) {
+      assertThat(e).hasMessage("serverRuntime can't be null");
     }
   }
 
@@ -90,31 +91,31 @@ public class MetricsReporterTest {
   public void testValidConstructorTopicOnly() {
     // Given
     Properties serverProperties = new Properties();
-    serverProperties.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_TOPIC_CONFIG, "anyTopic");
+    serverProperties.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_TOPIC_CONFIG, "anyTopic");
     Runtime serverRuntime = Runtime.getRuntime();
-
+    KafkaSupportConfig kafkaSupportConfig = new KafkaSupportConfig(serverProperties);
     // When
-    MetricsReporter reporter = new MetricsReporter(mockServer, serverProperties, serverRuntime);
-
+    MetricsReporter reporter = new MetricsReporter("testThread", false, mockServer, kafkaSupportConfig, serverRuntime);
+    reporter.init();
     // Then
     assertThat(reporter.reportingEnabled()).isTrue();
     assertThat(reporter.sendToKafkaEnabled()).isTrue();
-    assertThat(reporter.sendToConfluentEnabled()).isFalse();
+    assertThat(reporter.sendToConfluentEnabled()).isTrue();
   }
 
   @Test
   public void testValidConstructorHTTPOnly() {
     // Given
     Properties serverProperties = new Properties();
-    serverProperties.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_INSECURE_CONFIG, "http://example.com/");
+    serverProperties.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_INSECURE_CONFIG, "http://example.com/");
     Runtime serverRuntime = Runtime.getRuntime();
-
+    KafkaSupportConfig kafkaSupportConfig = new KafkaSupportConfig(serverProperties);
     // When
-    MetricsReporter reporter = new MetricsReporter(mockServer, serverProperties, serverRuntime);
-
+    MetricsReporter reporter = new MetricsReporter("testThread", false, mockServer, kafkaSupportConfig, serverRuntime);
+    reporter.init();
     // Then
     assertThat(reporter.reportingEnabled()).isTrue();
-    assertThat(reporter.sendToKafkaEnabled()).isFalse();
+    assertThat(reporter.sendToKafkaEnabled()).isTrue();
     assertThat(reporter.sendToConfluentEnabled()).isTrue();
   }
 
@@ -122,47 +123,16 @@ public class MetricsReporterTest {
   public void testValidConstructorHTTPSOnly() {
     // Given
     Properties serverProperties = new Properties();
-    serverProperties.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_SECURE_CONFIG, "https://example.com/");
+    serverProperties.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_SECURE_CONFIG, "https://example.com/");
     Runtime serverRuntime = Runtime.getRuntime();
-
+    KafkaSupportConfig kafkaSupportConfig = new KafkaSupportConfig(serverProperties);
     // When
-    MetricsReporter reporter = new MetricsReporter(mockServer, serverProperties, serverRuntime);
-
+    MetricsReporter reporter = new MetricsReporter("testThread", false, mockServer, kafkaSupportConfig, serverRuntime);
+    reporter.init();
     // Then
     assertThat(reporter.reportingEnabled()).isTrue();
-    assertThat(reporter.sendToKafkaEnabled()).isFalse();
+    assertThat(reporter.sendToKafkaEnabled()).isTrue();
     assertThat(reporter.sendToConfluentEnabled()).isTrue();
   }
 
-  @Test
-  public void testInvalidConstructorInvalidHTTPSOnly() {
-    // Given
-    Properties serverProperties = new Properties();
-    serverProperties.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_SECURE_CONFIG, "http://example.com/");
-    Runtime serverRuntime = Runtime.getRuntime();
-
-    // When/Then
-    try {
-      new MetricsReporter(mockServer, serverProperties, serverRuntime);
-      fail("IllegalArgumentException expected because secure endpoint was of wrong type");
-    } catch (IllegalArgumentException e) {
-      assertThat(e).hasMessageStartingWith("invalid HTTPS endpoint");
-    }
-  }
-
-  @Test
-  public void testInvalidConstructorInvalidHTTPOnly() {
-    // Given
-    Properties serverProperties = new Properties();
-    serverProperties.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_INSECURE_CONFIG, "https://example.com/");
-    Runtime serverRuntime = Runtime.getRuntime();
-
-    // When/Then
-    try {
-      new MetricsReporter(mockServer, serverProperties, serverRuntime);
-      fail("IllegalArgumentException expected because insecure endpoint was of wrong type");
-    } catch (IllegalArgumentException e) {
-      assertThat(e).hasMessageStartingWith("invalid HTTP endpoint");
-    }
-  }
 }

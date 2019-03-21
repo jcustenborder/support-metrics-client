@@ -43,7 +43,7 @@ public class SupportedServerStartableTest {
   @Test
   public void testProactiveSupportDisabled() throws IOException {
     Properties brokerConfiguration = defaultBrokerConfiguration();
-    brokerConfiguration.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENABLE_CONFIG, "false");
+    brokerConfiguration.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENABLE_CONFIG, "false");
     SupportedServerStartable supportedServerStartable = new SupportedServerStartable(brokerConfiguration);
 
     assertThat(supportedServerStartable.isProactiveSupportActiveAtRuntime()).isFalse();
@@ -53,8 +53,8 @@ public class SupportedServerStartableTest {
   @Test
   public void testProactiveSupportEnabledKafkaOnly() throws IOException {
     Properties brokerConfiguration = defaultBrokerConfiguration();
-    brokerConfiguration.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_INSECURE_ENABLE_CONFIG, "false");
-    brokerConfiguration.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_SECURE_ENABLE_CONFIG, "false");
+    brokerConfiguration.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_INSECURE_ENABLE_CONFIG, "false");
+    brokerConfiguration.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_SECURE_ENABLE_CONFIG, "false");
     SupportedServerStartable supportedServerStartable = new SupportedServerStartable(brokerConfiguration);
 
     assertThat(supportedServerStartable.isProactiveSupportActiveAtRuntime()).isTrue();
@@ -66,7 +66,7 @@ public class SupportedServerStartableTest {
   @Test
   public void testProactiveSupportEnabledKafkaAndConfluentHTTPOnly() throws IOException {
     Properties brokerConfiguration = defaultBrokerConfiguration();
-    brokerConfiguration.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_SECURE_ENABLE_CONFIG, "false");
+    brokerConfiguration.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_SECURE_ENABLE_CONFIG, "false");
     SupportedServerStartable supportedServerStartable = new SupportedServerStartable(brokerConfiguration);
 
     assertThat(supportedServerStartable.isProactiveSupportActiveAtRuntime()).isTrue();
@@ -78,7 +78,7 @@ public class SupportedServerStartableTest {
   @Test
   public void testProactiveSupportEnabledKafkaAndConfluentHTTPSOnly() throws IOException {
     Properties brokerConfiguration = defaultBrokerConfiguration();
-    brokerConfiguration.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_INSECURE_ENABLE_CONFIG, "false");
+    brokerConfiguration.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENDPOINT_INSECURE_ENABLE_CONFIG, "false");
     SupportedServerStartable supportedServerStartable = new SupportedServerStartable(brokerConfiguration);
 
     assertThat(supportedServerStartable.isProactiveSupportActiveAtRuntime()).isTrue();
@@ -90,7 +90,7 @@ public class SupportedServerStartableTest {
   @Test
   public void testProactiveSupportEnabledConfluentHTTPSAndHTTPOnly() throws IOException {
     Properties brokerConfiguration = defaultBrokerConfiguration();
-    brokerConfiguration.setProperty(SupportConfig.CONFLUENT_SUPPORT_METRICS_TOPIC_CONFIG, "");
+    brokerConfiguration.setProperty(KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_TOPIC_CONFIG, "");
     SupportedServerStartable supportedServerStartable = new SupportedServerStartable(brokerConfiguration);
 
     assertThat(supportedServerStartable.isProactiveSupportActiveAtRuntime()).isTrue();

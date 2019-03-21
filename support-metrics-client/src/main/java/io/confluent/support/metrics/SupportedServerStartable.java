@@ -11,27 +11,31 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
+
 package io.confluent.support.metrics;
-
-import org.apache.kafka.common.utils.Time;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Properties;
 
 import kafka.metrics.KafkaMetricsReporter;
 import kafka.metrics.KafkaMetricsReporter$;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
 import kafka.utils.VerifiableProperties;
+import org.apache.kafka.common.utils.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.Option;
 import scala.collection.Seq;
+
+import java.security.Provider;
+import java.security.Security;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * Starts a Kafka broker plus an associated "support metrics" collection thread for this broker.
  *
- * This class is similar to Apache Kafka's {@code KafkaServerStartable.scala} but, in addition, it
- * periodically collects metrics from the running broker that are relevant to providing customer
+ * <p>This class is similar to Apache Kafka's {@code KafkaServerStartable.scala} but, in addition,
+ * it periodically collects metrics from the running broker that are relevant to providing customer
  * support.
  *
  * @see <a href="https://github.com/apache/kafka/blob/trunk/core/src/main/scala/kafka/server/KafkaServerStartable.scala">KafkaServerStartable.scala</a>
@@ -39,27 +43,99 @@ import scala.collection.Seq;
 public class SupportedServerStartable {
 
   private static final Logger log = LoggerFactory.getLogger(SupportedServerStartable.class);
+  private static String metricsReporterThreadName = "ConfluentProactiveSupportMetricsAgent";
+
   private final KafkaServer server;
   private MetricsReporter metricsReporter = null;
-  private Thread metricsThread = null;
+
+
+  void checkFips1402(KafkaConfig serverConfig) {
+    log.info("Starting with FIPS 140-2 Mode.");
+
+    final String ERROR_PREFIX = "FIPS 140-2 Configuration Error - ";
+
+    int violations = 0;
+
+    final List<String> allowedCiphers = Arrays.asList(
+        "TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA",
+        "TLS_DHE_DSS_WITH_AES_128_CBC_SHA",
+        "TLS_DHE_DSS_WITH_AES_256_CBC_SHA",
+        "TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_DHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_DHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA",
+        "TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA",
+        "TLS_ECDH_RSA_WITH_AES_128_CBC_SHA",
+        "TLS_ECDH_RSA_WITH_AES_256_CBC_SHA"
+    );
+
+    log.trace("checkFips1402() - Checking SSL");
+    for (final String cipher : serverConfig.sslCipher()) {
+      log.trace("checkFips1402() - Checking cipher '{}'", cipher);
+      if(!allowedCiphers.contains(cipher)) {
+        violations++;
+        log.error(ERROR_PREFIX + "SSL Cipher \"{}\" is not allowed.  Check ssl.cipher.suites.", cipher);
+      }
+    }
+
+    final List<String> allowedProtocols = Arrays.asList(
+        "TLSv1.2",
+        "TLSv1.1"
+    );
+
+    log.trace("checkFips1402() - Checking Protocols");
+    for (final String protocol : serverConfig.sslEnabledProtocols()) {
+      log.trace("checkFips1402() - Checking protocol '{}'", protocol);
+      if(!allowedProtocols.contains(protocol)) {
+        violations++;
+        log.error(ERROR_PREFIX + "Protocol \"{}\" is not allowed. Check ssl.enabled.protocols.", protocol);
+      }
+    }
+
+    final List<String> allowedBrokerProtocols = Arrays.asList("SASL_SSL", "SSL");
+
+    if(allowedBrokerProtocols.contains(serverConfig.interBrokerSecurityProtocol().name)) {
+      violations++;
+      log.error(ERROR_PREFIX + "Inter Broker Security Protocol '{}' is not allowed. Only SASL_SSL and SSL are allowed. " +
+          "Check security.inter.broker.protocol.", serverConfig.interBrokerSecurityProtocol().name);
+    }
+
+    if (violations > 0) {
+      throw new IllegalStateException("FIPS configuration violations preventing server startup. Please check previous log entries.");
+    }
+  }
+
 
   public SupportedServerStartable(Properties brokerConfiguration) {
-    Seq<KafkaMetricsReporter> reporters = KafkaMetricsReporter$.MODULE$.startReporters(new VerifiableProperties(brokerConfiguration));
+    Seq<KafkaMetricsReporter>
+        reporters =
+        KafkaMetricsReporter$.MODULE$.startReporters(new VerifiableProperties(brokerConfiguration));
     KafkaConfig serverConfig = KafkaConfig.fromProps(brokerConfiguration);
+
+    if (brokerConfiguration.getProperty("fips.140.2.enable") == "true") {
+      checkFips1402(serverConfig);
+    }
+
+
     Option<String> noThreadNamePrefix = Option.empty();
     server = new KafkaServer(serverConfig, Time.SYSTEM, noThreadNamePrefix, reporters);
 
-    if (SupportConfig.isProactiveSupportEnabled(brokerConfiguration)) {
+    KafkaSupportConfig kafkaSupportConfig = new KafkaSupportConfig(brokerConfiguration);
+    if (kafkaSupportConfig.isProactiveSupportEnabled()) {
       try {
-        Runtime serverRuntime = Runtime.getRuntime();
-
-        Properties brokerConfigurationPlusMissingPSSettings =
-            SupportConfig.mergeAndValidateWithDefaultProperties(brokerConfiguration);
-
-        metricsReporter =
-            new MetricsReporter(server, brokerConfigurationPlusMissingPSSettings, serverRuntime);
-        metricsThread = newThread("ConfluentProactiveSupportMetricsAgent", metricsReporter, true);
-        long reportIntervalMs = SupportConfig.getReportIntervalMs(brokerConfigurationPlusMissingPSSettings);
+        createAndInitializeMetricsReporter(kafkaSupportConfig);
+        long reportIntervalMs = kafkaSupportConfig.getReportIntervalMs();
         long reportIntervalHours = reportIntervalMs / (60 * 60 * 1000);
         // We log at WARN level to increase the visibility of this information.
         log.warn(legalDisclaimerProactiveSupportEnabled(reportIntervalHours));
@@ -74,33 +150,37 @@ public class SupportedServerStartable {
     }
   }
 
-  private static Thread newThread(String name, Runnable runnable, boolean daemon) {
-    Thread thread = new Thread(runnable, name);
-    thread.setDaemon(daemon);
-    thread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+  private void createAndInitializeMetricsReporter(KafkaSupportConfig kafkaSupportConfig) {
+    metricsReporter = new MetricsReporter(metricsReporterThreadName, true, server,
+            kafkaSupportConfig, Runtime.getRuntime());
+    metricsReporter.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+      @Override
       public void uncaughtException(Thread t, Throwable e) {
         log.error("Uncaught exception in thread '{}':", t.getName(), e);
       }
     });
-    return thread;
+    metricsReporter.init();
   }
 
   private String legalDisclaimerProactiveSupportEnabled(long reportIntervalHours) {
-    return "Please note that the support metrics collection feature (\"Metrics\") of Proactive Support is enabled.  " +
-        "With Metrics enabled, this broker is configured to collect and report certain broker and " +
-        "cluster metadata (\"Metadata\") about your use of the Confluent Platform (including " +
-        "without limitation, your remote internet protocol address) to Confluent, Inc. " +
-        "(\"Confluent\") or its parent, subsidiaries, affiliates or service providers every " +
-        reportIntervalHours +
-        "hours.  This Metadata may be transferred to any country in which Confluent maintains " +
-        "facilities.  For a more in depth discussion of how Confluent processes such information, " +
-        "please read our Privacy Policy located at http://www.confluent.io/privacy. " +
-        "By proceeding with `" + SupportConfig.CONFLUENT_SUPPORT_METRICS_ENABLE_CONFIG + "=true`, " +
-        "you agree to all such collection, transfer, storage and use of Metadata by Confluent.  " +
-        "You can turn the Metrics feature off by setting `" +
-        SupportConfig.CONFLUENT_SUPPORT_METRICS_ENABLE_CONFIG + "=false` in the broker " +
-        "configuration and restarting the broker.  See the Confluent Platform documentation for " +
-        "further information.";
+    return
+        "Please note that the support metrics collection feature (\"Metrics\") of Proactive "
+        + "Support is enabled.  With Metrics enabled, this broker is configured to collect and "
+        + "report certain broker and cluster metadata (\"Metadata\") about your use of the "
+        + "Confluent Platform (including without limitation, your remote internet protocol address)"
+        + " to Confluent, Inc. (\"Confluent\") or its parent, subsidiaries, affiliates or service"
+        + " providers every "
+        + reportIntervalHours
+        + "hours.  This Metadata may be transferred to any country in which Confluent maintains "
+        + "facilities.  For a more in depth discussion of how Confluent processes such information,"
+        + " please read our Privacy Policy located at http://www.confluent.io/privacy. "
+        + "By proceeding with `"
+        + KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENABLE_CONFIG
+        + "=true`, you agree to all such collection, transfer, storage and use of Metadata by "
+        + "Confluent.  You can turn the Metrics feature off by setting `"
+        + KafkaSupportConfig.CONFLUENT_SUPPORT_METRICS_ENABLE_CONFIG
+        + "=false` in the broker configuration and restarting the broker.  See the Confluent "
+        + "Platform documentation for further information.";
   }
 
   private String legalDisclaimerProactiveSupportDisabled() {
@@ -115,8 +195,8 @@ public class SupportedServerStartable {
     }
 
     try {
-      if (metricsThread != null) {
-        metricsThread.start();
+      if (metricsReporter != null) {
+        metricsReporter.start();
       }
     } catch (Exception e) {
       // We catch any exceptions to prevent collateral damage to the more important broker
@@ -127,9 +207,12 @@ public class SupportedServerStartable {
 
   public void shutdown() {
     try {
-      if (metricsThread != null) {
-        metricsThread.interrupt();
-        metricsThread.join();
+      log.info("Shutting down SupportedServerStartable");
+      if (metricsReporter != null) {
+        metricsReporter.close();
+        log.info("Waiting for metrics thread to exit");
+        metricsReporter.join();
+        metricsReporter = null;
       }
     } catch (Exception e) {
       // We catch any exceptions to prevent collateral damage to the more important broker
@@ -138,9 +221,11 @@ public class SupportedServerStartable {
     }
 
     try {
+      log.info("Shutting down KafkaServer");
       server.shutdown();
     } catch (Exception e) {
       // Calling exit() can lead to deadlock as exit() can be called multiple times. Force exit.
+      log.error("Caught exception when trying to shut down KafkaServer. Exiting forcefully.", e);
       Runtime.getRuntime().halt(ExitCodes.ERROR);
     }
   }
